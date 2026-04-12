@@ -2,8 +2,6 @@
  * LogicFlow — Algorithm Visualizer
  * Frontend logic: Fetch API, D3.js v7 animations, async playback
  * Supports both sorting and searching algorithm categories.
- *
- * D3.js is loaded globally via CDN in index.html
  */
 
 // ============================================================
@@ -14,12 +12,12 @@ const state = {
     steps: [],
     currentStep: 0,
     isRunning: false,
-    animationId: null,      // for cancellation
+    animationId: null,
     algorithms: [],
-    speed: 50,              // ms per step
+    speed: 50,
     arraySize: 30,
     currentCategory: 'sorting',
-    eliminatedIndices: new Set(),  // track eliminated bars during search
+    eliminatedIndices: new Set(),
 };
 
 // ============================================================
@@ -36,6 +34,7 @@ const dom = {
     btnGenerate: document.getElementById('btn-generate'),
     btnStart: document.getElementById('btn-start'),
     btnStop: document.getElementById('btn-stop'),
+    themeToggle: document.getElementById('theme-toggle'),
     svg: d3.select('#viz-svg'),
     stepCurrent: document.getElementById('step-current'),
     stepTotal: document.getElementById('step-total'),
@@ -55,7 +54,7 @@ const dom = {
 
 
 // ============================================================
-// Color Mapping for Action Types
+// Color Mapping
 // ============================================================
 function getActionColors() {
     const cs = getComputedStyle(document.documentElement);
@@ -101,9 +100,38 @@ const legendConfig = {
 
 
 // ============================================================
+// Theme
+// ============================================================
+function initTheme() {
+    const saved = localStorage.getItem('logicflow-theme');
+    const preferred = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+    const theme = saved || preferred;
+    document.documentElement.setAttribute('data-theme', theme);
+}
+
+function toggleTheme() {
+    const current = document.documentElement.getAttribute('data-theme');
+    const next = current === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('logicflow-theme', next);
+
+    // Update browser chrome color on mobile
+    const metaThemeColors = document.querySelectorAll('meta[name="theme-color"]');
+    const color = next === 'dark' ? '#09090b' : '#ffffff';
+    metaThemeColors.forEach(meta => meta.setAttribute('content', color));
+
+    actionColors = getActionColors();
+    if (!state.isRunning) {
+        renderBars(state.array, [], 'default');
+    }
+}
+
+
+// ============================================================
 // Initialize
 // ============================================================
 async function init() {
+    initTheme();
     actionColors = getActionColors();
     await loadAlgorithms();
     bindEvents();
@@ -113,7 +141,7 @@ async function init() {
 
 /**
  * Fetch available algorithms from the backend registry.
- * Groups them by category using <optgroup>.
+ * Groups them by category using optgroup.
  */
 async function loadAlgorithms() {
     try {
@@ -121,14 +149,12 @@ async function loadAlgorithms() {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         state.algorithms = await res.json();
 
-        // Group by category
         const grouped = {};
         state.algorithms.forEach(algo => {
             if (!grouped[algo.category]) grouped[algo.category] = [];
             grouped[algo.category].push(algo);
         });
 
-        // Populate dropdown with optgroups
         dom.select.innerHTML = '';
         const categoryOrder = ['searching', 'sorting'];
         categoryOrder.forEach(cat => {
@@ -146,7 +172,6 @@ async function loadAlgorithms() {
             dom.select.appendChild(optgroup);
         });
 
-        // Select first and show description
         if (state.algorithms.length > 0) {
             dom.select.selectedIndex = 0;
             updateAlgorithmUI();
@@ -169,6 +194,7 @@ function bindEvents() {
 
     dom.btnStart.addEventListener('click', startVisualization);
     dom.btnStop.addEventListener('click', stopAnimation);
+    dom.themeToggle.addEventListener('click', toggleTheme);
 
     dom.sizeSlider.addEventListener('input', (e) => {
         state.arraySize = parseInt(e.target.value);
@@ -186,12 +212,9 @@ function bindEvents() {
 
     dom.select.addEventListener('change', () => {
         updateAlgorithmUI();
-        if (!state.isRunning) {
-            generateArray();
-        }
+        if (!state.isRunning) generateArray();
     });
 
-    // Responsive SVG resize
     window.addEventListener('resize', () => {
         if (!state.isRunning) renderBars(state.array, [], 'default');
     });
@@ -207,24 +230,12 @@ function updateAlgorithmUI() {
     if (!algo) return;
 
     state.currentCategory = algo.category;
-
-    // Update description
     dom.algoDescText.textContent = algo.description;
-
-    // Update category badge
     dom.algoCategoryBadge.textContent = algo.category;
     dom.algoCategoryBadge.className = `category-badge ${algo.category}`;
-
-    // Show/hide target input
     dom.targetGroup.style.display = algo.category === 'searching' ? '' : 'none';
-
-    // Update operations label
     dom.operationsLabel.textContent = algo.category === 'searching' ? 'Checks' : 'Swaps / Moves';
-
-    // Update legend
     updateLegend();
-
-    // Hide search result
     dom.searchResult.style.display = 'none';
 }
 
@@ -242,7 +253,7 @@ function updateLegend() {
 function generateArray() {
     const size = state.arraySize;
     state.array = Array.from({ length: size }, () =>
-        Math.floor(Math.random() * 95) + 5  // values between 5 and 99
+        Math.floor(Math.random() * 95) + 5
     );
     state.steps = [];
     state.currentStep = 0;
@@ -253,13 +264,10 @@ function generateArray() {
     dom.stepTotal.textContent = '0';
     dom.searchResult.style.display = 'none';
 
-    // For searching: pre-fill a random target from the array (50% chance it exists)
     if (state.currentCategory === 'searching') {
         if (Math.random() > 0.3) {
-            // Pick an existing value
             dom.targetInput.value = state.array[Math.floor(Math.random() * state.array.length)];
         } else {
-            // Pick a value that might not exist
             dom.targetInput.value = Math.floor(Math.random() * 95) + 5;
         }
     }
@@ -293,14 +301,11 @@ function renderBars(array, highlights, actionType) {
 
     const highlightSet = new Set(highlights);
 
-    // Data join with key function for stable identity
     const bars = svg.selectAll('rect.bar')
         .data(array, (d, i) => i);
 
-    // EXIT
     bars.exit().remove();
 
-    // ENTER + UPDATE
     bars.join(
         enter => enter.append('rect')
             .attr('class', 'bar')
@@ -330,8 +335,10 @@ function renderBars(array, highlights, actionType) {
             .attr('ry', Math.min(3, barWidth / 3))
     );
 
-    // Value labels (only show for smaller arrays)
     if (n <= 40 && barWidth > 14) {
+        const labelColor = getComputedStyle(document.documentElement)
+            .getPropertyValue('--bar-label-color').trim();
+
         const labels = svg.selectAll('text.bar-label')
             .data(array, (d, i) => i);
 
@@ -341,7 +348,7 @@ function renderBars(array, highlights, actionType) {
             enter => enter.append('text')
                 .attr('class', 'bar-label')
                 .attr('text-anchor', 'middle')
-                .attr('fill', '#e8e8f0')
+                .attr('fill', labelColor)
                 .attr('font-size', Math.min(11, barWidth * 0.5) + 'px')
                 .attr('font-family', 'var(--font-mono)')
                 .attr('font-weight', '500')
@@ -353,6 +360,7 @@ function renderBars(array, highlights, actionType) {
                 .duration(state.isRunning ? Math.max(20, state.speed * 0.4) : 300)
                 .attr('x', (d, i) => padding.left + i * (barWidth + gap) + barWidth / 2)
                 .attr('y', (d) => padding.top + chartHeight - yScale(d) - 5)
+                .attr('fill', labelColor)
                 .text(d => d)
         );
     } else {
@@ -360,23 +368,16 @@ function renderBars(array, highlights, actionType) {
     }
 }
 
-/**
- * Determine bar color based on highlights, action type, and eliminated state.
- */
 function getBarColor(index, highlightSet, actionType) {
     if (highlightSet.has(index)) {
         return actionColors[actionType] || actionColors.compare;
     }
-    // For searching: show eliminated bars in gray
     if (state.currentCategory === 'searching' && state.eliminatedIndices.has(index)) {
         return actionColors.eliminate;
     }
     return actionColors.default;
 }
 
-/**
- * Determine bar opacity — dimmed for eliminated indices during search.
- */
 function getBarOpacity(index, highlightSet, actionType) {
     if (highlightSet.has(index)) return 1;
     if (state.currentCategory === 'searching' && state.eliminatedIndices.has(index)) return 0.35;
@@ -396,7 +397,6 @@ async function startVisualization() {
 
     const algo = state.algorithms.find(a => a.name === algorithm);
 
-    // Validate target for searching
     if (algo && algo.category === 'searching') {
         const targetVal = dom.targetInput.value;
         if (targetVal === '' || isNaN(parseInt(targetVal))) {
@@ -406,25 +406,21 @@ async function startVisualization() {
         }
     }
 
-    // Disable controls during running
     setRunningState(true);
     resetMetrics();
     state.eliminatedIndices = new Set();
     dom.searchResult.style.display = 'none';
 
     try {
-        // Build request body
         const body = {
             algorithm: algorithm,
             array: [...state.array],
         };
 
-        // Add target for searching algorithms
         if (algo && algo.category === 'searching') {
             body.target = parseInt(dom.targetInput.value);
         }
 
-        // Fetch execution trace from Go backend
         const res = await fetch('/execute', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -440,15 +436,12 @@ async function startVisualization() {
         state.steps = data.steps;
         state.currentStep = 0;
 
-        // Set final metrics immediately
         dom.valComplexity.textContent = data.metadata.time_complexity;
-        dom.valTime.textContent = `${data.metadata.execution_time_us}µs`;
+        dom.valTime.textContent = `${data.metadata.execution_time_us}us`;
         dom.stepTotal.textContent = state.steps.length;
 
-        // Animate through steps
         await animateSteps(data.metadata.comparisons, data.metadata.operations);
 
-        // Show search result if applicable
         if (data.metadata.category === 'searching') {
             showSearchResult(data.metadata.found_index, body.target);
         }
@@ -461,10 +454,6 @@ async function startVisualization() {
     }
 }
 
-/**
- * Iterate through execution trace steps with configurable delay.
- * Uses a cancellation token pattern for the stop button.
- */
 async function animateSteps(totalComparisons, totalOperations) {
     const runId = Symbol('run');
     state.animationId = runId;
@@ -473,55 +462,45 @@ async function animateSteps(totalComparisons, totalOperations) {
     let opCount = 0;
 
     for (let i = 0; i < state.steps.length; i++) {
-        // Check if animation was cancelled
         if (state.animationId !== runId) return;
 
         const step = state.steps[i];
         state.currentStep = i + 1;
 
-        // Update counters based on action type
         if (step.action_type === 'compare' || step.action_type === 'check') compCount++;
         if (['swap', 'merge', 'insert', 'shift', 'check', 'jump'].includes(step.action_type)) opCount++;
 
-        // Track eliminated indices for searching visualization
         if (step.action_type === 'eliminate' && state.currentCategory === 'searching') {
             step.highlights.forEach(idx => state.eliminatedIndices.add(idx));
         }
 
-        // Update DOM
         dom.stepCurrent.textContent = state.currentStep;
         dom.valComparisons.textContent = compCount;
         dom.valOperations.textContent = opCount;
 
-        // Render current state
         renderBars(step.current_state, step.highlights, step.action_type);
 
-        // Wait before next step
         await sleep(state.speed);
     }
 
-    // Final state — use server-side counts for accuracy
     dom.valComparisons.textContent = totalComparisons;
     dom.valOperations.textContent = totalOperations;
 }
 
 function stopAnimation() {
-    state.animationId = null; // cancels the running loop
+    state.animationId = null;
     setRunningState(false);
 }
 
-/**
- * Show search result banner after search completes.
- */
 function showSearchResult(foundIndex, target) {
     dom.searchResult.style.display = '';
     if (foundIndex >= 0) {
         dom.searchResult.className = 'glass-card found';
-        dom.searchResultIcon.textContent = '✓';
+        dom.searchResultIcon.textContent = 'Found';
         dom.searchResultText.textContent = `Target ${target} found at index ${foundIndex}`;
     } else {
         dom.searchResult.className = 'glass-card not-found';
-        dom.searchResultIcon.textContent = '✗';
+        dom.searchResultIcon.textContent = 'Not Found';
         dom.searchResultText.textContent = `Target ${target} was not found in the array`;
     }
 }
@@ -555,8 +534,8 @@ function setRunningState(running) {
 function resetMetrics() {
     dom.valComparisons.textContent = '0';
     dom.valOperations.textContent = '0';
-    dom.valComplexity.textContent = '—';
-    dom.valTime.textContent = '—';
+    dom.valComplexity.textContent = '--';
+    dom.valTime.textContent = '--';
     dom.stepCurrent.textContent = '0';
     dom.stepTotal.textContent = '0';
 }
