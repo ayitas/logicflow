@@ -1,0 +1,25 @@
+{
+  "version": 2,
+  "rewrites": [
+    {
+      "source": "/execute",
+      "destination": "/api/execute"
+    },
+    {
+      "source": "/sort",
+      "destination": "/api/execute"
+    },
+    {
+      "source": "/algorithms",
+      "destination": "/api/algorithms"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/static/$1"
+    },
+    {
+      "source": "/",
+      "destination": "/static/index.html"
+    }
+  ]
+}
