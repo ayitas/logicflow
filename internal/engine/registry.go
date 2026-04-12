@@ -2,10 +2,11 @@ package engine
 
 import (
 	"fmt"
+	"sort"
 	"sync"
 )
 
-// Algorithm is the interface that all sorting/algorithm implementations must satisfy.
+// Algorithm is the interface that all algorithm implementations must satisfy.
 // To add a new algorithm:
 //  1. Create a new file in internal/algorithm/
 //  2. Define a struct implementing this interface
@@ -19,15 +20,18 @@ type Algorithm interface {
 	// DisplayName returns a human-friendly name (e.g., "Bubble Sort").
 	DisplayName() string
 
+	// Category returns the algorithm category (e.g., "sorting", "searching").
+	Category() string
+
 	// TimeComplexity returns the Big-O time complexity string (e.g., "O(n²)").
 	TimeComplexity() string
 
 	// Description returns a brief explanation of the algorithm.
 	Description() string
 
-	// Execute runs the algorithm on a copy of the input array and returns
-	// the step-by-step execution trace along with comparison and swap counts.
-	Execute(arr []int) (steps []Step, comparisons int, swapsMoves int)
+	// Execute runs the algorithm with the given parameters and returns
+	// the step-by-step execution trace along with comparison and operation counts.
+	Execute(params ExecuteParams) (steps []Step, comparisons int, operations int)
 }
 
 // --- Global Registry ---
@@ -61,7 +65,7 @@ func Get(name string) (Algorithm, bool) {
 	return algo, ok
 }
 
-// List returns information about all registered algorithms.
+// List returns information about all registered algorithms, sorted by category then name.
 func List() []AlgorithmInfo {
 	mu.RLock()
 	defer mu.RUnlock()
@@ -71,10 +75,20 @@ func List() []AlgorithmInfo {
 		infos = append(infos, AlgorithmInfo{
 			Name:           algo.Name(),
 			DisplayName:    algo.DisplayName(),
+			Category:       algo.Category(),
 			TimeComplexity: algo.TimeComplexity(),
 			Description:    algo.Description(),
 		})
 	}
+
+	// Sort by category (sorting first) then by display name
+	sort.Slice(infos, func(i, j int) bool {
+		if infos[i].Category != infos[j].Category {
+			return infos[i].Category < infos[j].Category
+		}
+		return infos[i].DisplayName < infos[j].DisplayName
+	})
+
 	return infos
 }
 

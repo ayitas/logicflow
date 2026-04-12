@@ -15,19 +15,19 @@ func init() {
 
 func (is *InsertionSort) Name() string           { return "insertion_sort" }
 func (is *InsertionSort) DisplayName() string    { return "Insertion Sort" }
+func (is *InsertionSort) Category() string       { return "sorting" }
 func (is *InsertionSort) TimeComplexity() string { return "O(n²)" }
 func (is *InsertionSort) Description() string {
 	return "Builds the sorted array one element at a time by inserting each element into its correct position. Efficient for small or nearly sorted data."
 }
 
-func (is *InsertionSort) Execute(arr []int) ([]engine.Step, int, int) {
-	data := engine.CopyArray(arr)
+func (is *InsertionSort) Execute(params engine.ExecuteParams) ([]engine.Step, int, int) {
+	data := engine.CopyArray(params.Array)
 	n := len(data)
 	steps := make([]engine.Step, 0, n*n)
 	comparisons := 0
 	moves := 0
 
-	// First element is trivially sorted
 	steps = append(steps, engine.Step{
 		CurrentState: engine.SnapshotArray(data),
 		Highlights:   []int{0},
@@ -38,14 +38,12 @@ func (is *InsertionSort) Execute(arr []int) ([]engine.Step, int, int) {
 		key := data[i]
 		j := i - 1
 
-		// Compare key with sorted portion
 		steps = append(steps, engine.Step{
 			CurrentState: engine.SnapshotArray(data),
 			Highlights:   []int{i},
 			ActionType:   "compare",
 		})
 
-		// Shift elements that are greater than key
 		for j >= 0 {
 			comparisons++
 			steps = append(steps, engine.Step{
@@ -68,7 +66,6 @@ func (is *InsertionSort) Execute(arr []int) ([]engine.Step, int, int) {
 			}
 		}
 
-		// Insert key at correct position
 		data[j+1] = key
 		moves++
 		steps = append(steps, engine.Step{

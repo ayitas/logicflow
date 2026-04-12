@@ -14,13 +14,14 @@ func init() {
 
 func (q *QuickSort) Name() string           { return "quick_sort" }
 func (q *QuickSort) DisplayName() string    { return "Quick Sort" }
+func (q *QuickSort) Category() string       { return "sorting" }
 func (q *QuickSort) TimeComplexity() string { return "O(n log n)" }
 func (q *QuickSort) Description() string {
 	return "Divide and Conquer algorithm that selects a pivot and partitions the array around it. Very fast in practice with O(n log n) average time."
 }
 
-func (q *QuickSort) Execute(arr []int) ([]engine.Step, int, int) {
-	data := engine.CopyArray(arr)
+func (q *QuickSort) Execute(params engine.ExecuteParams) ([]engine.Step, int, int) {
+	data := engine.CopyArray(params.Array)
 	tracker := &quickTracker{
 		steps:       make([]engine.Step, 0, len(data)*len(data)),
 		comparisons: 0,
@@ -29,7 +30,6 @@ func (q *QuickSort) Execute(arr []int) ([]engine.Step, int, int) {
 
 	quickSortRecursive(data, 0, len(data)-1, tracker)
 
-	// Mark all as sorted
 	tracker.steps = append(tracker.steps, engine.Step{
 		CurrentState: engine.SnapshotArray(data),
 		Highlights:   makeRange(0, len(data)-1),
@@ -48,7 +48,6 @@ type quickTracker struct {
 func quickSortRecursive(data []int, low, high int, t *quickTracker) {
 	if low >= high {
 		if low == high {
-			// Single element is sorted
 			t.steps = append(t.steps, engine.Step{
 				CurrentState: engine.SnapshotArray(data),
 				Highlights:   []int{low},
@@ -60,7 +59,6 @@ func quickSortRecursive(data []int, low, high int, t *quickTracker) {
 
 	pivotIdx := lomutoPartition(data, low, high, t)
 
-	// Mark pivot as sorted
 	t.steps = append(t.steps, engine.Step{
 		CurrentState: engine.SnapshotArray(data),
 		Highlights:   []int{pivotIdx},
@@ -71,11 +69,9 @@ func quickSortRecursive(data []int, low, high int, t *quickTracker) {
 	quickSortRecursive(data, pivotIdx+1, high, t)
 }
 
-// lomutoPartition uses the last element as pivot.
 func lomutoPartition(data []int, low, high int, t *quickTracker) int {
 	pivot := data[high]
 
-	// Show pivot selection
 	t.steps = append(t.steps, engine.Step{
 		CurrentState: engine.SnapshotArray(data),
 		Highlights:   []int{high},
@@ -87,7 +83,6 @@ func lomutoPartition(data []int, low, high int, t *quickTracker) int {
 	for j := low; j < high; j++ {
 		t.comparisons++
 
-		// Compare with pivot
 		t.steps = append(t.steps, engine.Step{
 			CurrentState: engine.SnapshotArray(data),
 			Highlights:   []int{j, high},
@@ -108,7 +103,6 @@ func lomutoPartition(data []int, low, high int, t *quickTracker) int {
 		}
 	}
 
-	// Place pivot in correct position
 	i++
 	if i != high {
 		data[i], data[high] = data[high], data[i]

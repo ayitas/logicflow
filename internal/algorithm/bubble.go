@@ -14,13 +14,14 @@ func init() {
 
 func (b *BubbleSort) Name() string           { return "bubble_sort" }
 func (b *BubbleSort) DisplayName() string    { return "Bubble Sort" }
+func (b *BubbleSort) Category() string       { return "sorting" }
 func (b *BubbleSort) TimeComplexity() string { return "O(n²)" }
 func (b *BubbleSort) Description() string {
 	return "Repeatedly steps through the list, compares adjacent elements, and swaps them if they are in the wrong order. Educational baseline algorithm."
 }
 
-func (b *BubbleSort) Execute(arr []int) ([]engine.Step, int, int) {
-	data := engine.CopyArray(arr)
+func (b *BubbleSort) Execute(params engine.ExecuteParams) ([]engine.Step, int, int) {
+	data := engine.CopyArray(params.Array)
 	n := len(data)
 	steps := make([]engine.Step, 0, n*n)
 	comparisons := 0
@@ -38,7 +39,6 @@ func (b *BubbleSort) Execute(arr []int) ([]engine.Step, int, int) {
 			})
 
 			if data[j] > data[j+1] {
-				// Swap
 				data[j], data[j+1] = data[j+1], data[j]
 				swaps++
 				swapped = true

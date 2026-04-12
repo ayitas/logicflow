@@ -10,16 +10,16 @@ import (
 	"logicflow/internal/engine"
 )
 
-// SortHandler handles POST /sort requests.
+// ExecuteHandler handles POST /execute requests.
 // It validates the request, runs the selected algorithm, and returns
 // the step-by-step execution trace with performance metadata.
-func SortHandler(w http.ResponseWriter, r *http.Request) {
+func ExecuteHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, `{"error":"method not allowed"}`, http.StatusMethodNotAllowed)
 		return
 	}
 
-	var req engine.SortRequest
+	var req engine.AlgorithmRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, `{"error":"invalid JSON body"}`, http.StatusBadRequest)
 		return
@@ -42,19 +42,48 @@ func SortHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Searching algorithms require a target value
+	if algo.Category() == "searching" && req.Target == nil {
+		http.Error(w, `{"error":"target value is required for searching algorithms"}`, http.StatusBadRequest)
+		return
+	}
+
+	// Build execute params
+	params := engine.ExecuteParams{
+		Array: req.Array,
+	}
+	if req.Target != nil {
+		params.Target = *req.Target
+	}
+
 	// Execute and measure time
 	start := time.Now()
-	steps, comparisons, swapsMoves := algo.Execute(req.Array)
+	steps, comparisons, operations := algo.Execute(params)
 	elapsed := time.Since(start)
 
-	resp := engine.SortResponse{
+	// Determine found_index for searching algorithms
+	var foundIndex *int
+	if algo.Category() == "searching" {
+		idx := -1
+		if len(steps) > 0 {
+			lastStep := steps[len(steps)-1]
+			if lastStep.ActionType == "found" && len(lastStep.Highlights) > 0 {
+				idx = lastStep.Highlights[0]
+			}
+		}
+		foundIndex = &idx
+	}
+
+	resp := engine.AlgorithmResponse{
 		Steps: steps,
 		Metadata: engine.Metadata{
 			ExecutionTimeMicroseconds: elapsed.Microseconds(),
 			Comparisons:               comparisons,
-			SwapsMoves:                swapsMoves,
+			Operations:                operations,
 			TimeComplexity:            algo.TimeComplexity(),
 			AlgorithmName:             algo.DisplayName(),
+			Category:                  algo.Category(),
+			FoundIndex:                foundIndex,
 		},
 	}
 
