@@ -15,13 +15,14 @@ func init() {
 
 func (s *SelectionSort) Name() string           { return "selection_sort" }
 func (s *SelectionSort) DisplayName() string    { return "Selection Sort" }
+func (s *SelectionSort) Category() string       { return "sorting" }
 func (s *SelectionSort) TimeComplexity() string { return "O(n²)" }
 func (s *SelectionSort) Description() string {
 	return "Finds the minimum element from the unsorted part and places it at the beginning. Minimizes the number of swaps performed."
 }
 
-func (s *SelectionSort) Execute(arr []int) ([]engine.Step, int, int) {
-	data := engine.CopyArray(arr)
+func (s *SelectionSort) Execute(params engine.ExecuteParams) ([]engine.Step, int, int) {
+	data := engine.CopyArray(params.Array)
 	n := len(data)
 	steps := make([]engine.Step, 0, n*n)
 	comparisons := 0
@@ -31,7 +32,6 @@ func (s *SelectionSort) Execute(arr []int) ([]engine.Step, int, int) {
 		minIdx := i
 
 		for j := i + 1; j < n; j++ {
-			// Compare current element with minimum
 			comparisons++
 			steps = append(steps, engine.Step{
 				CurrentState: engine.SnapshotArray(data),
@@ -44,7 +44,6 @@ func (s *SelectionSort) Execute(arr []int) ([]engine.Step, int, int) {
 			}
 		}
 
-		// Swap the found minimum with the first unsorted element
 		if minIdx != i {
 			data[i], data[minIdx] = data[minIdx], data[i]
 			swaps++
@@ -55,7 +54,6 @@ func (s *SelectionSort) Execute(arr []int) ([]engine.Step, int, int) {
 			})
 		}
 
-		// Mark element as sorted
 		steps = append(steps, engine.Step{
 			CurrentState: engine.SnapshotArray(data),
 			Highlights:   []int{i},
@@ -63,7 +61,6 @@ func (s *SelectionSort) Execute(arr []int) ([]engine.Step, int, int) {
 		})
 	}
 
-	// Mark last element as sorted
 	steps = append(steps, engine.Step{
 		CurrentState: engine.SnapshotArray(data),
 		Highlights:   []int{n - 1},

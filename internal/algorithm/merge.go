@@ -14,13 +14,14 @@ func init() {
 
 func (m *MergeSort) Name() string           { return "merge_sort" }
 func (m *MergeSort) DisplayName() string    { return "Merge Sort" }
+func (m *MergeSort) Category() string       { return "sorting" }
 func (m *MergeSort) TimeComplexity() string { return "O(n log n)" }
 func (m *MergeSort) Description() string {
 	return "Divide and Conquer algorithm that divides the array in half, recursively sorts, and merges. Guaranteed O(n log n) and stable."
 }
 
-func (m *MergeSort) Execute(arr []int) ([]engine.Step, int, int) {
-	data := engine.CopyArray(arr)
+func (m *MergeSort) Execute(params engine.ExecuteParams) ([]engine.Step, int, int) {
+	data := engine.CopyArray(params.Array)
 	tracker := &mergeTracker{
 		steps:       make([]engine.Step, 0, len(data)*len(data)),
 		comparisons: 0,
@@ -29,7 +30,6 @@ func (m *MergeSort) Execute(arr []int) ([]engine.Step, int, int) {
 
 	mergeSortRecursive(data, 0, len(data)-1, tracker)
 
-	// Mark all as sorted
 	tracker.steps = append(tracker.steps, engine.Step{
 		CurrentState: engine.SnapshotArray(data),
 		Highlights:   makeRange(0, len(data)-1),
@@ -39,7 +39,6 @@ func (m *MergeSort) Execute(arr []int) ([]engine.Step, int, int) {
 	return tracker.steps, tracker.comparisons, tracker.moves
 }
 
-// mergeTracker accumulates steps and counters across recursive calls.
 type mergeTracker struct {
 	steps       []engine.Step
 	comparisons int
@@ -53,7 +52,6 @@ func mergeSortRecursive(data []int, left, right int, t *mergeTracker) {
 
 	mid := left + (right-left)/2
 
-	// Show partition
 	t.steps = append(t.steps, engine.Step{
 		CurrentState: engine.SnapshotArray(data),
 		Highlights:   []int{left, mid, right},
@@ -66,7 +64,6 @@ func mergeSortRecursive(data []int, left, right int, t *mergeTracker) {
 }
 
 func merge(data []int, left, mid, right int, t *mergeTracker) {
-	// Create temporary arrays
 	leftArr := make([]int, mid-left+1)
 	rightArr := make([]int, right-mid)
 	copy(leftArr, data[left:mid+1])
@@ -77,7 +74,6 @@ func merge(data []int, left, mid, right int, t *mergeTracker) {
 	for i < len(leftArr) && j < len(rightArr) {
 		t.comparisons++
 
-		// Show comparison
 		t.steps = append(t.steps, engine.Step{
 			CurrentState: engine.SnapshotArray(data),
 			Highlights:   []int{left + i, mid + 1 + j},
@@ -93,7 +89,6 @@ func merge(data []int, left, mid, right int, t *mergeTracker) {
 		}
 		t.moves++
 
-		// Show merge placement
 		t.steps = append(t.steps, engine.Step{
 			CurrentState: engine.SnapshotArray(data),
 			Highlights:   []int{k},
@@ -102,7 +97,6 @@ func merge(data []int, left, mid, right int, t *mergeTracker) {
 		k++
 	}
 
-	// Copy remaining elements
 	for i < len(leftArr) {
 		data[k] = leftArr[i]
 		t.moves++
@@ -128,7 +122,6 @@ func merge(data []int, left, mid, right int, t *mergeTracker) {
 	}
 }
 
-// makeRange returns a slice of ints from start to end inclusive.
 func makeRange(start, end int) []int {
 	r := make([]int, end-start+1)
 	for i := range r {

@@ -1,8 +1,8 @@
-// LogicFlow — Sorting Algorithm Visualizer
+// LogicFlow — Algorithm Visualizer
 //
 // A high-performance algorithm visualization server built with Go.
-// The server exposes a REST API for running sorting algorithms and
-// serves the frontend static files.
+// The server exposes a REST API for running algorithms (sorting, searching, etc.)
+// and serves the frontend static files.
 //
 // Architecture:
 //   - internal/engine/    → Core types and algorithm registry
@@ -31,17 +31,24 @@ import (
 func main() {
 	const port = ":8080"
 
-	// Log registered algorithms
+	// Log registered algorithms grouped by category
 	algos := engine.List()
-	fmt.Printf("🚀 LogicFlow — Algorithm Visualizer\n")
-	fmt.Printf("   Registered algorithms: %d\n", len(algos))
+	fmt.Printf("LogicFlow — Algorithm Visualizer\n")
+	fmt.Printf("   Registered algorithms: %d\n\n", len(algos))
+
+	currentCategory := ""
 	for _, a := range algos {
-		fmt.Printf("   • %-20s %s\n", a.DisplayName, a.TimeComplexity)
+		if a.Category != currentCategory {
+			currentCategory = a.Category
+			fmt.Printf("   [%s]\n", currentCategory)
+		}
+		fmt.Printf("   - %-25s %s\n", a.DisplayName, a.TimeComplexity)
 	}
 	fmt.Println()
 
 	// API routes
-	http.HandleFunc("/sort", corsMiddleware(handler.SortHandler))
+	http.HandleFunc("/execute", corsMiddleware(handler.ExecuteHandler))
+	http.HandleFunc("/sort", corsMiddleware(handler.ExecuteHandler)) // backward compatibility
 	http.HandleFunc("/algorithms", corsMiddleware(handler.AlgorithmsHandler))
 
 	// Serve frontend static files

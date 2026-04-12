@@ -1,6 +1,6 @@
-# LogicFlow — Sorting Algorithm Visualizer
+# LogicFlow — Algorithm Visualizer
 
-A high-performance, full-stack algorithm visualizer designed for backend engineers to analyze and compare sorting efficiency in real-time through animated step-by-step execution traces.
+A high-performance, full-stack algorithm visualizer designed for backend engineers to analyze and compare algorithm efficiency in real-time through animated step-by-step execution traces.
 
 Built with **Go** (Backend) and **D3.js v7** (Frontend). Zero external Go dependencies.
 
@@ -8,13 +8,38 @@ Built with **Go** (Backend) and **D3.js v7** (Frontend). Zero external Go depend
 
 ## About
 
-LogicFlow visualizes how sorting algorithms work internally — not just the final result, but every single comparison, swap, and merge operation rendered as an animated bar chart.
+LogicFlow visualizes how algorithms work internally — not just the final result, but every single comparison, swap, search check, and elimination rendered as an animated bar chart.
 
 Reading pseudocode or Big-O notation alone doesn't give a clear picture of how algorithms actually behave under different data conditions. LogicFlow solves this by providing:
 
 - **Step-by-step execution traces** generated server-side by the Go backend, giving an accurate representation of each algorithm's internal operations.
-- **Real-time performance metrics** including comparison count, swap/move count, time complexity label, and actual server processing time in microseconds.
+- **Real-time performance metrics** including comparison count, operation count, time complexity label, and actual server processing time in microseconds.
 - **Visual comparison** across algorithms on the same dataset, making it straightforward to reason about algorithmic trade-offs.
+- **Multi-category support** — currently supports sorting and searching algorithms, with architecture designed for future categories (graph, pathfinding, etc.).
+
+---
+
+## Supported Algorithms
+
+### Sorting (6 algorithms)
+
+| Algorithm | Time Complexity | Notes |
+|-----------|----------------|-------|
+| Bubble Sort | O(n²) | Stable, early termination |
+| Selection Sort | O(n²) | Minimizes swaps |
+| Insertion Sort | O(n²) | Efficient for nearly sorted data |
+| Merge Sort | O(n log n) | Stable, divide & conquer |
+| Quick Sort | O(n log n) avg | Lomuto partition |
+| Heap Sort | O(n log n) | In-place, guaranteed performance |
+
+### Searching (4 algorithms)
+
+| Algorithm | Time Complexity | Notes |
+|-----------|----------------|-------|
+| Linear Search | O(n) | Works on unsorted arrays |
+| Binary Search | O(log n) | Requires sorted array |
+| Jump Search | O(√n) | Block-based, requires sorted array |
+| Interpolation Search | O(log log n) avg | Best for uniform distributions |
 
 ---
 
@@ -26,11 +51,11 @@ Reading pseudocode or Big-O notation alone doesn't give a clear picture of how a
 │  ┌────────────────────────────────────────────────┐   │
 │  │  Vanilla JS + D3.js v7                        │   │
 │  │  - SVG bar chart with animated transitions    │   │
-│  │  - Async step-by-step playback                │   │
+│  │  - Category-aware UI (sorting vs searching)   │   │
 │  │  - Real-time metric counters                  │   │
 │  └─────────────────┬──────────────────────────────┘   │
 │                    │                                  │
-│         GET /algorithms    POST /sort                 │
+│         GET /algorithms    POST /execute              │
 │         (auto-discovery)   (execution trace)          │
 └────────────────────┼──────────────────────────────────┘
                      │
@@ -38,24 +63,23 @@ Reading pseudocode or Big-O notation alone doesn't give a clear picture of how a
 │                Go HTTP Server (:8080)                  │
 │  ┌─────────────────┴──────────────────────────────┐   │
 │  │  handler/sort.go                               │   │
-│  │  - POST /sort  → run algorithm, return trace   │   │
+│  │  - POST /execute  → run algorithm, return trace│   │
 │  │  - GET /algorithms → list registered algos     │   │
 │  └─────────────────┬──────────────────────────────┘   │
 │                    │                                  │
 │  ┌─────────────────┴──────────────────────────────┐   │
 │  │  engine/registry.go (Plugin Registry)          │   │
-│  │  - Algorithm interface                         │   │
+│  │  - Algorithm interface (with Category)         │   │
 │  │  - Register() / Get() / List()                 │   │
 │  └─────────────────┬──────────────────────────────┘   │
 │                    │                                  │
 │  ┌─────────────────┴──────────────────────────────┐   │
-│  │  algorithm/                                    │   │
-│  │  - bubble.go    → Bubble Sort     O(n²)        │   │
-│  │  - selection.go → Selection Sort  O(n²)        │   │
-│  │  - insertion.go → Insertion Sort  O(n²)        │   │
-│  │  - merge.go     → Merge Sort     O(n log n)    │   │
-│  │  - quick.go     → Quick Sort     O(n log n)    │   │
-│  │  - [future algorithms...]                      │   │
+│  │  algorithm/ (one file per algorithm)           │   │
+│  │  - Sorting: bubble, selection, insertion,      │   │
+│  │             merge, quick, heap                 │   │
+│  │  - Searching: linear, binary, jump,            │   │
+│  │               interpolation                    │   │
+│  │  - [future categories...]                      │   │
 │  └────────────────────────────────────────────────┘   │
 └───────────────────────────────────────────────────────┘
 ```
@@ -66,28 +90,33 @@ Reading pseudocode or Big-O notation alone doesn't give a clear picture of how a
 
 ```
 logicflow/
-├── main.go                        # Entry point — HTTP server, routing, static file serving
-├── go.mod                         # Go module definition
+├── main.go                            # Entry point — HTTP server, routing, static file serving
+├── go.mod                             # Go module definition
 │
-├── internal/                      # Internal packages (unexported outside module)
+├── internal/                          # Internal packages (unexported outside module)
 │   ├── engine/
-│   │   ├── types.go               # Shared types: Step, SortRequest, SortResponse, Metadata
-│   │   └── registry.go            # Algorithm interface + global plugin registry
+│   │   ├── types.go                   # Shared types: Step, AlgorithmRequest, AlgorithmResponse, ExecuteParams
+│   │   └── registry.go               # Algorithm interface + global plugin registry
 │   │
-│   ├── algorithm/                 # Algorithm implementations (one file per algorithm)
-│   │   ├── bubble.go              # Bubble Sort — O(n²), stable, early termination
-│   │   ├── selection.go           # Selection Sort — O(n²), minimizes swaps
-│   │   ├── insertion.go           # Insertion Sort — O(n²), efficient for nearly sorted data
-│   │   ├── merge.go               # Merge Sort — O(n log n), stable, divide & conquer
-│   │   └── quick.go               # Quick Sort — O(n log n) avg, Lomuto partition
+│   ├── algorithm/                     # Algorithm implementations (one file per algorithm)
+│   │   ├── bubble.go                  # Bubble Sort — O(n²)
+│   │   ├── selection.go               # Selection Sort — O(n²)
+│   │   ├── insertion.go               # Insertion Sort — O(n²)
+│   │   ├── merge.go                   # Merge Sort — O(n log n)
+│   │   ├── quick.go                   # Quick Sort — O(n log n)
+│   │   ├── heap.go                    # Heap Sort — O(n log n)
+│   │   ├── linear_search.go           # Linear Search — O(n)
+│   │   ├── binary_search.go           # Binary Search — O(log n)
+│   │   ├── jump_search.go             # Jump Search — O(√n)
+│   │   └── interpolation_search.go    # Interpolation Search — O(log log n)
 │   │
 │   └── handler/
-│       └── sort.go                # HTTP handlers for POST /sort and GET /algorithms
+│       └── sort.go                    # HTTP handlers for POST /execute and GET /algorithms
 │
-└── static/                        # Frontend (served as static files)
-    ├── index.html                 # HTML5 — SVG container, controls, metrics panel
-    ├── style.css                  # Dark theme, glassmorphism, responsive (mobile-first)
-    └── script.js                  # D3.js v7 animation engine, Fetch API, async playback
+└── static/                            # Frontend (served as static files)
+    ├── index.html                     # HTML5 — SVG container, controls, metrics panel
+    ├── style.css                      # Dark theme, glassmorphism, responsive (mobile-first)
+    └── script.js                      # D3.js v7 animation engine, category-aware UI
 ```
 
 ---
@@ -100,7 +129,7 @@ logicflow/
 |-----------|--------|
 | Language | Go 1.24 |
 | HTTP Server | `net/http` (standard library, zero external dependencies) |
-| Architecture | Plugin/Registry pattern — designed for easy algorithm extension |
+| Architecture | Plugin/Registry pattern with category support |
 | API Format | JSON REST |
 
 ### Frontend
@@ -133,12 +162,20 @@ Expected output:
 
 ```
 LogicFlow — Algorithm Visualizer
-   Registered algorithms: 5
-   - Bubble Sort          O(n²)
-   - Selection Sort       O(n²)
-   - Insertion Sort       O(n²)
-   - Merge Sort           O(n log n)
-   - Quick Sort           O(n log n)
+   Registered algorithms: 10
+
+   [searching]
+   - Binary Search             O(log n)
+   - Interpolation Search      O(log log n)
+   - Jump Search               O(√n)
+   - Linear Search             O(n)
+   [sorting]
+   - Bubble Sort               O(n²)
+   - Heap Sort                 O(n log n)
+   - Insertion Sort            O(n²)
+   - Merge Sort                O(n log n)
+   - Quick Sort                O(n log n)
+   - Selection Sort            O(n²)
 
    Server listening on http://localhost:8080
 ```
@@ -156,14 +193,25 @@ go build -o logicflow .
 
 ## Usage
 
-1. **Select an algorithm** from the dropdown (all 5 sorting algorithms are listed with their time complexity).
-2. **Adjust array size** using the slider (5–100 elements).
-3. **Adjust speed** using the speed slider (1ms–200ms delay per step).
-4. **Generate** a new random array by clicking "Generate".
-5. **Start** the visualization — the array is sent to the Go backend, which returns a full execution trace. The frontend then animates through each step.
-6. **Stop** the animation at any time.
+### Sorting Algorithms
+
+1. Select a sorting algorithm from the dropdown (grouped under "Sorting").
+2. Adjust array size and animation speed using the sliders.
+3. Click "Generate" for a new random array.
+4. Click "Start" to execute — the array is sent to the Go backend, which returns a step-by-step trace. The frontend animates through each operation.
+
+### Searching Algorithms
+
+1. Select a searching algorithm from the dropdown (grouped under "Searching").
+2. A "Search Target" input field appears — enter the value to find.
+3. Click "Start" to execute — the backend runs the search and returns a trace showing every comparison and elimination.
+4. When the animation finishes, a result banner shows whether the target was found (and at which index) or not found.
+
+Note: Binary Search, Jump Search, and Interpolation Search require sorted arrays. The backend automatically sorts the array before searching.
 
 ### Bar Colors
+
+**Sorting mode:**
 
 | Color | Meaning |
 |-------|---------|
@@ -173,12 +221,15 @@ go build -o logicflow .
 | Cyan | Pivot / Partition point |
 | Green | Sorted (final position) |
 
-### Displayed Metrics
+**Searching mode:**
 
-- **Comparisons** — total comparisons performed
-- **Swaps/Moves** — total element exchanges or movements
-- **Time Complexity** — Big-O label for the selected algorithm
-- **Server Time** — actual Go backend execution time in microseconds
+| Color | Meaning |
+|-------|---------|
+| Gray/Purple | Default |
+| Yellow | Currently being checked |
+| Cyan | Jump / Search range |
+| Dimmed gray | Eliminated from search |
+| Green | Found (target located) |
 
 ---
 
@@ -186,31 +237,49 @@ go build -o logicflow .
 
 ### `GET /algorithms`
 
-Returns a list of all algorithms currently registered in the backend registry. The frontend calls this on page load to dynamically populate the dropdown.
+Returns a list of all algorithms registered in the backend registry, grouped by category.
 
 **Response:**
 
 ```json
 [
   {
+    "name": "binary_search",
+    "display_name": "Binary Search",
+    "category": "searching",
+    "time_complexity": "O(log n)",
+    "description": "Divides the sorted array in half repeatedly..."
+  },
+  {
     "name": "bubble_sort",
     "display_name": "Bubble Sort",
+    "category": "sorting",
     "time_complexity": "O(n²)",
-    "description": "Repeatedly steps through the list, compares adjacent elements, and swaps them if they are in the wrong order."
+    "description": "Repeatedly steps through the list..."
   }
 ]
 ```
 
-### `POST /sort`
+### `POST /execute`
 
-Executes the specified sorting algorithm on the given array and returns a step-by-step execution trace.
+Executes the specified algorithm and returns a step-by-step execution trace.
 
-**Request:**
+**Request (sorting):**
 
 ```json
 {
   "algorithm": "bubble_sort",
   "array": [5, 3, 1, 4, 2]
+}
+```
+
+**Request (searching):**
+
+```json
+{
+  "algorithm": "binary_search",
+  "array": [5, 3, 1, 4, 2],
+  "target": 3
 }
 ```
 
@@ -220,22 +289,19 @@ Executes the specified sorting algorithm on the given array and returns a step-b
 {
   "steps": [
     {
-      "current_state": [5, 3, 1, 4, 2],
-      "highlights": [0, 1],
-      "action_type": "compare"
-    },
-    {
-      "current_state": [3, 5, 1, 4, 2],
-      "highlights": [0, 1],
-      "action_type": "swap"
+      "current_state": [1, 2, 3, 4, 5],
+      "highlights": [2],
+      "action_type": "found"
     }
   ],
   "metadata": {
-    "execution_time_us": 3,
-    "comparisons": 10,
-    "swaps_moves": 7,
-    "time_complexity": "O(n²)",
-    "algorithm_name": "Bubble Sort"
+    "execution_time_us": 2,
+    "comparisons": 3,
+    "operations": 3,
+    "time_complexity": "O(log n)",
+    "algorithm_name": "Binary Search",
+    "category": "searching",
+    "found_index": 2
   }
 }
 ```
@@ -248,7 +314,7 @@ The backend uses a **plugin/registry pattern**. Adding a new algorithm requires 
 
 ### Steps
 
-**1.** Create a new file in `internal/algorithm/`, for example `heap.go`:
+**1.** Create a new file in `internal/algorithm/`:
 
 ```go
 package algorithm
@@ -263,33 +329,30 @@ func init() {
 
 func (h *HeapSort) Name() string           { return "heap_sort" }
 func (h *HeapSort) DisplayName() string    { return "Heap Sort" }
+func (h *HeapSort) Category() string       { return "sorting" }       // or "searching"
 func (h *HeapSort) TimeComplexity() string { return "O(n log n)" }
-func (h *HeapSort) Description() string    { return "Uses a binary heap data structure to sort." }
+func (h *HeapSort) Description() string    { return "Uses a binary heap..." }
 
-func (h *HeapSort) Execute(arr []int) ([]engine.Step, int, int) {
-    data := engine.CopyArray(arr)
+func (h *HeapSort) Execute(params engine.ExecuteParams) ([]engine.Step, int, int) {
+    data := engine.CopyArray(params.Array)
+    target := params.Target  // only used by searching algorithms
     steps := make([]engine.Step, 0)
-    comparisons, swaps := 0, 0
+    comparisons, operations := 0, 0
 
-    // Implement the algorithm here.
-    // For each significant operation, append a Step:
-    //   steps = append(steps, engine.Step{
-    //       CurrentState: engine.SnapshotArray(data),
-    //       Highlights:   []int{i, j},
-    //       ActionType:   "compare",  // or "swap", "merge", etc.
-    //   })
+    // Implement the algorithm, appending Steps for each operation...
 
-    return steps, comparisons, swaps
+    return steps, comparisons, operations
 }
 ```
 
-**2.** Restart the server. The new algorithm automatically appears in the frontend dropdown.
+**2.** Restart the server. The new algorithm automatically appears in the frontend dropdown under the correct category.
 
 ### How It Works
 
 - Go's `init()` functions execute automatically when a package is imported.
 - `main.go` imports `_ "logicflow/internal/algorithm"`, which triggers all `init()` registrations.
-- The frontend fetches `GET /algorithms` on page load to discover all registered algorithms dynamically — no hardcoded values on the client side.
+- The frontend fetches `GET /algorithms` on page load to discover all registered algorithms dynamically.
+- The UI automatically adapts based on the algorithm's `category` — showing target input for searching, adjusting legend colors, etc.
 
 ---
 

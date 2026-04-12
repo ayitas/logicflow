@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="LogicFlow — A high-performance sorting algorithm visualizer for backend engineers. Compare and analyze Bubble, Selection, Insertion, Merge, and Quick Sort in real-time.">
+    <meta name="description" content="LogicFlow — A high-performance algorithm visualizer for backend engineers. Visualize and compare sorting and searching algorithms in real-time.">
     <title>LogicFlow — Algorithm Visualizer</title>
 
     <!-- Google Fonts -->
@@ -60,6 +60,11 @@
                     </select>
                 </div>
 
+                <div class="control-group" id="target-group" style="display: none;">
+                    <label for="target-input">Search Target</label>
+                    <input type="number" id="target-input" placeholder="Enter value to find..." min="1" max="99">
+                </div>
+
                 <div class="control-group">
                     <label for="array-size-slider">Array Size: <span id="array-size-value">30</span></label>
                     <input type="range" id="array-size-slider" min="5" max="100" value="30">
@@ -89,7 +94,18 @@
 
         <!-- Algorithm Description -->
         <section id="algo-description" class="glass-card">
-            <p id="algo-desc-text">Select an algorithm to see its description.</p>
+            <div class="algo-desc-header">
+                <span id="algo-category-badge" class="category-badge">sorting</span>
+                <p id="algo-desc-text">Select an algorithm to see its description.</p>
+            </div>
+        </section>
+
+        <!-- Search Result Banner (hidden by default) -->
+        <section id="search-result" class="glass-card" style="display: none;">
+            <div class="search-result-content">
+                <span id="search-result-icon"></span>
+                <span id="search-result-text"></span>
+            </div>
         </section>
 
         <!-- Visualization Area -->
@@ -114,13 +130,13 @@
                 </div>
             </div>
 
-            <div class="metric-card glass-card" id="metric-swaps">
+            <div class="metric-card glass-card" id="metric-operations">
                 <div class="metric-icon">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
                 </div>
                 <div class="metric-info">
-                    <span class="metric-value" id="val-swaps">0</span>
-                    <span class="metric-label">Swaps / Moves</span>
+                    <span class="metric-value" id="val-operations">0</span>
+                    <span class="metric-label" id="operations-label">Swaps / Moves</span>
                 </div>
             </div>
 
@@ -148,12 +164,8 @@
         <!-- Legend -->
         <section id="legend" class="glass-card">
             <h3>Legend</h3>
-            <div class="legend-items">
-                <div class="legend-item"><span class="legend-color" style="background: var(--color-default)"></span> Default</div>
-                <div class="legend-item"><span class="legend-color" style="background: var(--color-compare)"></span> Comparing</div>
-                <div class="legend-item"><span class="legend-color" style="background: var(--color-swap)"></span> Swap / Move</div>
-                <div class="legend-item"><span class="legend-color" style="background: var(--color-partition)"></span> Partition / Pivot</div>
-                <div class="legend-item"><span class="legend-color" style="background: var(--color-sorted)"></span> Sorted</div>
+            <div class="legend-items" id="legend-items">
+                <!-- Populated dynamically by JS based on category -->
             </div>
         </section>
 
